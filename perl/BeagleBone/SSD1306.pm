@@ -81,23 +81,24 @@ sub init_display {
     $self->writeByte(0xAE, 'cmd');
     $self->writeByte(0xD5, 'cmd');
     $self->writeByte(0x80, 'cmd');
-    $self->writeByte(0xA8, 'cmd');
-    $self->writeByte(0x1F, 'cmd');
-    $self->writeByte(0xD3, 'cmd');
+    $self->writeByte(0xA8, 'cmd'); #set Multiplex Ratio
+    $self->writeByte(0x3F, 'cmd'); #1F = 31 for 128x32, 3F = 63 for 128x64
+    $self->writeByte(0xD3, 'cmd'); #set display offset
     $self->writeByte(0x00, 'cmd');
     $self->writeByte(0x8D, 'cmd'); # enable chargepump regulator
     $self->writeByte(0x14, 'cmd'); # turn on. (off= 0x10 if external power?)
 
-    $self->writeByte(0xDA, 'cmd');
-    $self->writeByte(0x02, 'cmd');
-    $self->writeByte(0x81, 'cmd');
+    $self->writeByte(0xDA, 'cmd'); #set COM Pins Hardware Configuration 
+    $self->writeByte(0x12, 'cmd'); #02h = sequential  12h = alternating
+        
+    $self->writeByte(0x81, 'cmd'); #set contrast
     $self->writeByte(0x8F, 'cmd');
 
-    $self->writeByte(0xD9, 'cmd');
+    $self->writeByte(0xD9, 'cmd'); #set Pre-Charge Period
     $self->writeByte(0xF1, 'cmd'); # 0x22 if ext power?
 
-    $self->writeByte(0xDB, 'cmd');
-    $self->writeByte(0x40, 'cmd');
+    $self->writeByte(0xDB, 'cmd'); #set Vcomh voltage, 
+    $self->writeByte(0x40, 'cmd'); #40h = .77*Vcc
 
     # Setup memory addressing mode, to horizontal
     $self->writeByte(0x20, 'cmd');
@@ -105,15 +106,15 @@ sub init_display {
 
     # Set page range to be 0-3 (for 32px - change to 0-7 if on a 64px panel)
     $self->writeByte(0x22, 'cmd');
-    $self->writeByte(0x0, 'cmd');
-    $self->writeByte(0x3, 'cmd');
+    $self->writeByte(0x0, 'cmd'); #start page
+    $self->writeByte(0x7, 'cmd'); #end page
 
     $self->writeByte(0xA4, 'cmd');
 
     $self->writeByte(0xAF, 'cmd'); # Display on
 
     # Clear the screen:
-    my @buf = map { 0 } (0..511);
+    my @buf = map { 0 } (0..1023);
     $self->writeBulk(\@buf);
 
     return;
@@ -191,6 +192,38 @@ sub display_inverse {
     my $self = shift;
     $self->writeByte(0xA7, 'cmd');
 }
+
+=head2 reset_to_origin
+
+Reset Column and Page pointers to 0,0
+Added by JPW, Jan 2013
+
+=cut
+
+sub reset_to_origin {
+    my $self = shift;
+    
+    $self->writeByte(0x21, 'cmd');
+    $self->writeByte(0x00, 'cmd'); #start page
+    $self->writeByte(0x7F, 'cmd'); #end page;    
+    $self->writeByte(0x22, 'cmd');
+    $self->writeByte(0x00, 'cmd'); #start page
+    $self->writeByte(0x07, 'cmd'); #end page;
+}
+
+=head2 reset_to_origin
+
+Put the display to sleep
+Added by JPW, Jan 2013
+
+=cut
+
+sub sleep_command {
+    my $self = shift;
+    $self->writeByte(0xAE, 'cmd');
+
+}
+
 
 =head1 AUTHOR
 
