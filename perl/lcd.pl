@@ -23,7 +23,11 @@ my @zed = qw(0 66 98 82 74 70 66 0);
 # 0 1 0 0 0 0 1 0    66
 # 0 0 0 0 0 0 0 0     0
 
-my $lcd = BeagleBone::SSD1306->new;
+my $lcd = BeagleBone::SSD1306->new(
+    dc_pin => 'P9_15',
+    rst_pin => 'P9_23',
+  );
+sleep 60;  
 while (1) {
     if (rand() > 0.5) {
         $lcd->writeByte($_, 'data') for @ay;

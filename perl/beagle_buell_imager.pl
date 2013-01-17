@@ -48,24 +48,28 @@ my $start;
 my $elapsed;
 my $buffer_ref;
 
-for(1,1){
+#loop through fetching info and updating screen
+while(1){
 #get timestamp for ghetto performance monitoring
 	$start = Time::HiRes::time;
 	&assignTexts();
 #make a copy of the empty image to be written on and then displayed
 	$OLED_image = $blank_image->copy();
 	&drawImage();
+	#&writeToFile("bb$_.bmp",$OLED_image);
 	#&imageToStdout();
 	$buffer_ref = &imageToBuffer($OLED_image);
 	print "buffer is " . @$buffer_ref . "bytes long\n";
-	$lcd->reset_to_origin();
+	$lcd->init_display();
 	$lcd->writeBulk($buffer_ref);
+
 	$elapsed = Time::HiRes::time - $start;
 	print "printed screen in $elapsed seconds\n";
 	sleep (1);
 }
 
-sub writeToFile{my $file = 'beaglebuell.bmp';
+sub writeToFile{
+	my ($file, $image) = @_;
 	$OLED_image->write(file=>$file)	or die 'Cannot save $file: ', $OLED_image->errstr;
 }
 
@@ -85,7 +89,7 @@ sub assignTexts {
 
 }
  
-sub drawImage {              
+sub drawImage {           
 	foreach my $line (keys %text_hash) {
 		my ($string,$x,$y,$font_size)= @{$text_hash{$line}};
 		$OLED_image->string(x => $x, y => $y,

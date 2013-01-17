@@ -65,13 +65,13 @@ Automatically called by new().
 sub init_display {
     my $self = shift;
 
-    # Using very paranoid delays here!
+    # Using paranoid delays here!
     $self->rst_pin->digitalWrite(1);
-    usleep(1000);
+    usleep(100);
     $self->rst_pin->digitalWrite(0);
-    usleep(10000);
+    usleep(100);
     $self->rst_pin->digitalWrite(1);
-    usleep(10000);
+    usleep(100);
 
 
     # this part originally cloned from:
@@ -193,25 +193,8 @@ sub display_inverse {
     $self->writeByte(0xA7, 'cmd');
 }
 
-=head2 reset_to_origin
 
-Reset Column and Page pointers to 0,0
-Added by JPW, Jan 2013
-
-=cut
-
-sub reset_to_origin {
-    my $self = shift;
-    
-    $self->writeByte(0x21, 'cmd');
-    $self->writeByte(0x00, 'cmd'); #start page
-    $self->writeByte(0x7F, 'cmd'); #end page;    
-    $self->writeByte(0x22, 'cmd');
-    $self->writeByte(0x00, 'cmd'); #start page
-    $self->writeByte(0x07, 'cmd'); #end page;
-}
-
-=head2 reset_to_origin
+=head2 sleep_command
 
 Put the display to sleep
 Added by JPW, Jan 2013
@@ -221,6 +204,19 @@ Added by JPW, Jan 2013
 sub sleep_command {
     my $self = shift;
     $self->writeByte(0xAE, 'cmd');
+
+}
+
+=head2 wake_command
+
+Put the display to sleep
+Added by JPW, Jan 2013
+
+=cut
+
+sub wake_command {
+    my $self = shift;
+    $self->writeByte(0xAF, 'cmd');
 
 }
 

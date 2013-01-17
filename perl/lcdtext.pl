@@ -6,7 +6,10 @@ use BeagleBone::Font::8x8;
 
 my @buffer = map { 0 } (0..512);
 
-my $lcd = BeagleBone::SSD1306->new;
+my $lcd = BeagleBone::SSD1306->new(
+    dc_pin => 'P9_15',
+    rst_pin => 'P9_23',
+  );
 
 my $count = 0;
 for my $i (0..9, 'A'..'Z', 'a'..'z') {
