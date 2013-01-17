@@ -2,10 +2,9 @@
 #
 #shatrat@shatrat.com
 #GPLv2 or later
-#For Imager to work correctly with fonts in ubuntu, install Freetype2 and recompile Imager in CPAN
 #
-#Basic sequence
-#init (create blank image, check serial interface)
+#Basic sequence (hopefully)
+#init {create image template, check everything to make sure it's working}
 #loop
 #	request serial data
 #	read serial data, generate text
