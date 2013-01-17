@@ -78,7 +78,8 @@ sub assignTexts {
 
 	my $temp_fahrenheit = sprintf("%.1f",&getTMP36_temp()) . "f";
 	my $time = 	(localtime)[2] % 12 .":". (localtime)[1];
-	%text_hash = (	
+	%text_hash = (
+	#expected format is 'key' => [string, x, y, fontsize]
 	'line1' => ["Air     77f",2,12,14],
 	'line2' => ["Oil    212f",2,24,14],
 	'line3' => ["Beagle $temp_fahrenheit",2,36,14],
@@ -136,8 +137,6 @@ sub imageToStdout{
 	
 	}
 }              
-
-
 	
 #accept an Imager image and return an array of 8 bit numbers
 sub imageToBuffer(){
@@ -151,7 +150,7 @@ sub imageToBuffer(){
 	my $y_page = 0;
 	my $y_bit = 0;
 	
-	
+	#loop through 8 pages by 128 columns. Each page is a vertical row of 8 pixels with LSB at the top.
 	for(0..7){
 		$y_page = $_;
 		for(0..127){
@@ -166,7 +165,7 @@ sub imageToBuffer(){
 					$bits[$y_bit] = 0;
 				}
 			}
-
+			#take array of bits and convert them to a scalar byte, thusly. (0,0,1,0,0,0,1,0) = (34)
 			$page = unpack( 'C',pack('b8',join('',@bits)));
 	#		print Dumper($page);
 			push(@buffer,$page);
@@ -179,11 +178,15 @@ sub imageToBuffer(){
 }
 
 sub getTMP36_temp{
+	#AIN2 in software is AIN1 in hardware, jumper accordingly
 	my $ADC_source = '/sys/devices/platform/omap/tsc/ain2';
 	open( my $adc_fh, "<", $ADC_source ) || die "Can't open $ADC_source: $!";	
 	my $digital_reading = <$adc_fh>;
 	close $adc_fh;
 	
+	#reading/4095 * 1800 returns millivolts for the beaglebone ADC
+	#(millivolts - 500) /10 returns degrees C for TMP36 chip
+	#Then convert from C to F
 	return ((($digital_reading/4095)*1800-500)/10)*9/5 + 32;
 	
 	
