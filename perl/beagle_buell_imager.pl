@@ -48,6 +48,8 @@ my $start;
 my $elapsed;
 my $buffer_ref;
 
+
+sleep 20; #run over to bbone and watch screen
 #loop through fetching info and updating screen
 while(1){
 #get timestamp for ghetto performance monitoring
@@ -59,14 +61,15 @@ while(1){
 	#&writeToFile("bb$_.bmp",$OLED_image);
 	#&imageToStdout();
 	$buffer_ref = &imageToBuffer($OLED_image);
-	print "buffer is " . @$buffer_ref . "bytes long\n";
-	$lcd->init_display();
+    # Clear the screen: (I have no idea why this would be necessary, seems to mitigate screen corruption)
+	my @buf = map { 0 } (0..1023);
+	$lcd->writeBulk(\@buf);
 	$lcd->writeBulk($buffer_ref);
-
 	$elapsed = Time::HiRes::time - $start;
-	print "printed screen in $elapsed seconds\n";
-	sleep (1);
+	print "printed " . @$buffer_ref . "bytes to screen in ". sprintf("%.3f",$elapsed) ."seconds\n";
+	sleep(1);
 }
+
 
 sub writeToFile{
 	my ($file, $image) = @_;
@@ -174,7 +177,7 @@ sub imageToBuffer(){
 		
 	}
 	return \@buffer;
-	
+
 }
 
 sub getTMP36_temp{

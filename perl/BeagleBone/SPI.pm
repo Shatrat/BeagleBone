@@ -57,10 +57,11 @@ int c_spi_write(unsigned char* bytes, unsigned int length) {
     }
 
     uint8_t bits = 8;
-    uint16_t delay = 0;
+    uint16_t delay = 10;
     // 20 MHz seems to work nicely, but maybe some controllers will want
     // slower speeds? Adjust downwards if you encounter trouble.
-    uint32_t speed = 20000000;
+    // ran into #$%&ing trouble, set speed to 5mhz -JPW
+    uint32_t speed = 5000000;
     // uint8_t tx[4096];
 
     struct spi_ioc_transfer tr = {
