@@ -3,6 +3,7 @@ use Inline C;
 use 5.14.1;
 use warnings;
 use Carp qw(croak);
+use Data::Dumper;
 
 sub new {
     my ($class, %args) = @_;
@@ -22,7 +23,6 @@ sub SpiWrite {
     my $data = join('', map { pack('C', $_) } @$bytes);
 
     my $length = scalar(@$bytes);
-
     my $r = c_spi_write($data, $length);
     # warn "spi_write() returned $r\n";
     return $r;
@@ -57,12 +57,13 @@ int c_spi_write(unsigned char* bytes, unsigned int length) {
     }
 
     uint8_t bits = 8;
-    uint16_t delay = 10;
+    uint16_t delay = 100;
     // 20 MHz seems to work nicely, but maybe some controllers will want
     // slower speeds? Adjust downwards if you encounter trouble.
     // ran into #$%&ing trouble, set speed to 5mhz -JPW
     uint32_t speed = 5000000;
     // uint8_t tx[4096];
+    uint8_t cs = 0;
 
     struct spi_ioc_transfer tr = {
         .tx_buf = (unsigned long)bytes,
@@ -71,6 +72,7 @@ int c_spi_write(unsigned char* bytes, unsigned int length) {
         .delay_usecs = delay,
         .speed_hz = speed,
         .bits_per_word = bits,
+        .cs_change = cs,
     };
 
     ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
@@ -79,7 +81,7 @@ int c_spi_write(unsigned char* bytes, unsigned int length) {
         exit(2);
     }
     if (close(fd) == -1) {
-        perror("failed to close SPI fiehandle");
+        perror("failed to close SPI filehandle");
         exit(2);
     }
     return ret;

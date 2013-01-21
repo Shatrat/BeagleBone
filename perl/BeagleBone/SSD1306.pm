@@ -134,7 +134,7 @@ Examples:
 
 sub writeByte {
     my ($self, $byte, $mode) = @_;
-    $mode //= 'data';
+    unless($mode){$mode = 'data'};
 
     # This can't be efficient :(
     my @bits = split('', unpack('B8', pack('C', $byte)));
@@ -168,7 +168,8 @@ sub writeBulk {
         unless (ref $bytes eq 'ARRAY');
 
     $self->dc_pin->digitalWrite(1); # data, not command
-    BeagleBone::SPI->SpiWrite($bytes);
+    my $r = BeagleBone::SPI->SpiWrite($bytes);
+    return $r;
 }
 
 =head2 display_normal

@@ -49,24 +49,30 @@ my $elapsed;
 my $buffer_ref;
 
 
-sleep 20; #run over to bbone and watch screen
+
 #loop through fetching info and updating screen
 while(1){
-#get timestamp for ghetto performance monitoring
+	#get timestamp for ghetto performance monitoring
 	$start = Time::HiRes::time;
+
 	&assignTexts();
-#make a copy of the empty image to be written on and then displayed
+	#make a copy of the empty image to be written on and then displayed
 	$OLED_image = $blank_image->copy();
 	&drawImage();
 	#&writeToFile("bb$_.bmp",$OLED_image);
 	#&imageToStdout();
-	$buffer_ref = &imageToBuffer($OLED_image);
+
+	$buffer_ref = &imageToBuffer($OLED_image);	
+
     # Clear the screen: (I have no idea why this would be necessary, seems to mitigate screen corruption)
 	my @buf = map { 0 } (0..1023);
 	$lcd->writeBulk(\@buf);
-	$lcd->writeBulk($buffer_ref);
+	
+	#now write actual image to screen from the buffer created by imageToBuffer
+	my $r = $lcd->writeBulk($buffer_ref);
+
 	$elapsed = Time::HiRes::time - $start;
-	print "printed " . @$buffer_ref . "bytes to screen in ". sprintf("%.3f",$elapsed) ."seconds\n";
+	print "printed " . @$buffer_ref . " bytes to screen returning [". $r ."] in ". sprintf("%.3f",$elapsed) ." seconds\n";
 	sleep(1);
 }
 
@@ -80,7 +86,7 @@ sub writeToFile{
 sub assignTexts {
 
 	my $temp_fahrenheit = sprintf("%.1f",&getTMP36_temp()) . "f";
-	my $time = 	(localtime)[2] % 12 .":". (localtime)[1];
+	my $time = 	(localtime)[2] % 12 .":". sprintf("%01d",(localtime)[1]);
 	%text_hash = (
 	#expected format is 'key' => [string, x, y, fontsize]
 	'line1' => ["Air     77f",2,12,14],
