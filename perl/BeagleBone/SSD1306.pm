@@ -221,6 +221,19 @@ sub wake_command {
 
 }
 
+=head2 no_op
+
+Just to try it
+Added by JPW, Jan 2013
+
+=cut
+
+sub no_op {
+    my $self = shift;
+    $self->writeByte(0xE3, 'cmd');
+
+}
+
 
 =head1 AUTHOR
 

@@ -23,6 +23,7 @@ sub SpiWrite {
     my $data = join('', map { pack('C', $_) } @$bytes);
 
     my $length = scalar(@$bytes);
+
     my $r = c_spi_write($data, $length);
     # warn "spi_write() returned $r\n";
     return $r;
@@ -69,10 +70,10 @@ int c_spi_write(unsigned char* bytes, unsigned int length) {
         .tx_buf = (unsigned long)bytes,
         .rx_buf = NULL,
         .len = length,
-        .delay_usecs = delay,
-        .speed_hz = speed,
-        .bits_per_word = bits,
-        .cs_change = cs,
+        //.delay_usecs = delay,
+        //.speed_hz = speed,
+        //.bits_per_word = bits,
+        //.cs_change = cs,
     };
 
     ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);

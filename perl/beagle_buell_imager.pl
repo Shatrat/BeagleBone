@@ -63,14 +63,10 @@ while(1){
 	#&imageToStdout();
 
 	$buffer_ref = &imageToBuffer($OLED_image);	
-
-    # Clear the screen: (I have no idea why this would be necessary, seems to mitigate screen corruption)
-	my @buf = map { 0 } (0..1023);
-	$lcd->writeBulk(\@buf);
 	
-	#now write actual image to screen from the buffer created by imageToBuffer
+	#now write image to screen from the buffer created by imageToBuffer
 	my $r = $lcd->writeBulk($buffer_ref);
-
+	
 	$elapsed = Time::HiRes::time - $start;
 	print "printed " . @$buffer_ref . " bytes to screen returning [". $r ."] in ". sprintf("%.3f",$elapsed) ." seconds\n";
 	sleep(1);
