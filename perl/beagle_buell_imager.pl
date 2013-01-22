@@ -21,6 +21,8 @@ use Data::Dumper;
 use Imager;
 use Time::HiRes;
 use BeagleBone::SSD1306::Image;
+use Device::SerialPort;
+use POSIX;
 
 #set up some variables for use in Imager
 my $font_filename = 'UbuntuMono-R.ttf';
@@ -64,7 +66,7 @@ while(1){
 	
 	my $elapsed = Time::HiRes::time - $start;
 	print "printed [". $r ."] bytes to screen in ". sprintf("%.3f",$elapsed) ." seconds\n";
-	sleep(1);
+#	sleep(1);
 }
 
 #for testing purposes, writes image to a file.  File type is determined by Imager using the file extension, try 'image.bmp' for example
@@ -77,16 +79,20 @@ sub writeToFile{
 #strings are pulled from various inputs to the BeagleBone
 sub assignTexts {
 
-	my $temp_fahrenheit = sprintf("%.1f",&getTMP36_temp()) . "f";
-	my $time = 	(localtime)[2] % 12 .":". sprintf("%01d",(localtime)[1]);
+	my $temp_fahrenheit = sprintf("%.1f",&getTMP36_temp());
+	my $time = strftime("%I:%M %p", localtime);
 	my $gear = sprintf("%1d",$temp_fahrenheit % 6);
+	my $air_temp = 77;
+	my $oil_temp = 212;
+	my $bat_volts = 13.8;
+	
 	my %result_hash = (
 	#expected format is 'key' => [string, x, y, fontsize]
-	'line1' => ["Air     77f",2,12,14],
-	'line2' => ["Oil    212f",2,24,14],
-	'line3' => ["Beagle $temp_fahrenheit",2,36,14],
-	'line4' => ["Time   $time",2,48,14],
-	'line5' => ["Volts  13.8",2,60,14],
+	'line1' => ["Air     ".$air_temp."f",2,12,14],
+	'line2' => ["Oil    ".$oil_temp."f",2,24,14],
+	'line3' => ["Bone  ".$temp_fahrenheit."f",2,36,14],
+	'line4' => ["$time",2,48,14],
+	'line5' => ["12VDC  ".$bat_volts."v",2,60,14],
 	'gear' => ["$gear",88,52,72],
 	);
 	return \%result_hash;
@@ -109,46 +115,6 @@ sub drawImage {
 	}
 } 
          
-	
-#accept an Imager image and return an array of 8 bit numbers
-#should work with 128x64, 128x32, and possibly other SSD1306 variations (128x16? 64x64?)
-sub imageToBuffer {
-
-	my $image = shift;
-	my $pixel_color = 0;
-	my @bits = [];
-	my $page = '';
-	my @buffer;
-	my $x = 0;
-	my $y_page = 0;
-	my $y_bit = 0;
-	
-	#loop through pages (height/8) by columns (width). Each page is a vertical row of 8 pixels with LSB at the top.
-	for(0..($image->getheight()/8 - 1)){
-		$y_page = $_;
-		for(0..($image->getwidth()-1)){
-			$x = $_;
-			for(0..7){
-				$y_bit = $_;
-				$pixel_color = $image->getpixel('x' => $x,'y' => $y_page*8 + $y_bit) or die "cannot getpixel $x, $y_page *8 + $y_bit on image ", $image->errstr;
-				if(($pixel_color->rgba())[0]){
-					$bits[$y_bit] = 1;
-				}
-				else{
-					$bits[$y_bit] = 0;
-				}
-			}
-			#take array of bits and convert them to a scalar byte, thusly. (0,0,1,0,0,0,1,0) = (34)
-			$page = unpack( 'C',pack('b8',join('',@bits)));
-			push(@buffer,$page);
-			
-		}
-		
-	}
-	return \@buffer;
-
-}
-
 sub getTMP36_temp{
 	#AIN2 in software is AIN1 in hardware, jumper accordingly
 	my $ADC_source = '/sys/devices/platform/omap/tsc/ain2';
@@ -160,5 +126,26 @@ sub getTMP36_temp{
 	#(millivolts - 500) /10 returns degrees C for TMP36 chip
 	#Then convert from C to F
 	return ((($digital_reading/4095)*1800-500)/10)*9/5 + 32;
+	
+}
+
+sub getDDFIRuntimeData{
+	
+	
+#	The following is the format of an 8 byte request to the ECU for run time data	
+#	inArray[0]=0x01; //SOH
+#	inArray[1]=0x00; //Emittend
+#	inArray[2]=0x42; //Recipient
+#	inArray[3]=0x02; //Data Size
+#	inArray[4]=0xFF; //EOH
+#	inArray[5]=0x02; //SOT
+#	inArray[6]=0x43; //Data 1 //0x56 = Get version, 0x43 = Get runttime data
+#	inArray[7]=0x03; //EOT
+#	inArray[8]=0xFD; //Checksum
+#
+#	The response for a DDFI2 ECU is a 107 byte string following the format describe
+#	in section 22.1 of the Buell Tuning Guide v2
+#	http://xoptiinside.com/yahoo_site_admin/assets/docs/BuellTuningGuide_EN_V20.24861747.pdf
+
 	
 }

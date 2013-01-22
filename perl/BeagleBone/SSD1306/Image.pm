@@ -44,7 +44,8 @@ sub imageToBuffer {
 			$x = $_;
 			for(0..7){
 				$y_bit = $_;
-				$pixel_color = $image->getpixel('x' => $x,'y' => $y_page*8 + $y_bit) or die "cannot getpixel $x, $y_page *8 + $y_bit on image ", $image->errstr;
+				$pixel_color = $image->getpixel('x' => $x,'y' => $y_page*8 + $y_bit) 
+					or die "cannot getpixel $x, $y_page *8 + $y_bit on image ", $image->errstr;
 				if(($pixel_color->rgba())[0]){
 					$bits[$y_bit] = 1;
 				}
