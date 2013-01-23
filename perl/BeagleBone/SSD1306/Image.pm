@@ -30,7 +30,7 @@ Should work with 128x64, 128x32, and possibly other SSD1306 variations (128x16? 
 sub imageToBuffer {
 	my $image = shift;
 	my $pixel_color = 0;
-	my @bits = [];
+	my @bits = [0,0,0,0,0,0,0,0];
 	my $page = '';
 	my @buffer;
 	my $x = 0;
@@ -46,6 +46,9 @@ sub imageToBuffer {
 				$y_bit = $_;
 				$pixel_color = $image->getpixel('x' => $x,'y' => $y_page*8 + $y_bit) 
 					or die "cannot getpixel $x, $y_page *8 + $y_bit on image ", $image->errstr;
+				
+				#TODO see if there is a way to read the first channel of color index directly
+				#without calling the rgba function and incurring call stack overhead
 				if(($pixel_color->rgba())[0]){
 					$bits[$y_bit] = 1;
 				}
@@ -56,7 +59,9 @@ sub imageToBuffer {
 			#take array of bits and convert them to a scalar byte, thusly. (0,0,1,0,0,0,1,0) = (34)
 			$page = unpack( 'C',pack('b8',join('',@bits)));
 			push(@buffer,$page);
-			
+			#TODO instead of using push, rewrite to use $buffer[$y_page*$image->getwidth() + $x] = $page;
+			#because writing to a fixed size array is faster than pushing to one
+			#also call getwidth and getheight once and store the value
 		}
 		
 	}
