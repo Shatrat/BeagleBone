@@ -3,7 +3,6 @@ use 5.14.1;
 use warnings;
 use parent 'BeagleBone::SSD1306';
 use Imager;
-use Data::Dumper;
 
 =head1 NAME
 
@@ -25,8 +24,6 @@ Accept an Imager image and return an array of 8 bit numbers
 Was written to work with grayscale Imager objects.
 Should work with 128x64, 128x32, and possibly other SSD1306 variations (128x16? 64x64?)
 
-rev1 averaged .682 seconds per frame
-rev2 averaged .681 spf, this is with calling getheight() and getwidth() up front
 
 =cut
 
