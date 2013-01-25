@@ -18,10 +18,24 @@ This assumes a grayscale image of the same size as the monochrome display
 
 =cut
 
+=head2 display_image
+
+Accept an Imager image and send it to the SSD1306 display
+
+=cut
+
+sub display_image{
+my ($self, $image) = @_;
+my $buffer = &imageToBuffer($image);
+my $pixels = $self->writebulk($buffer);
+return $pixels;
+}
+
+
 =head2 imageToBuffer
 
 Accept an Imager image and return an array of 8 bit numbers
-Was written to work with grayscale Imager objects.
+Was written to work with grayscale Imager objects.  It will work with any Imager object, but you might not get the results you expect.
 Should work with 128x64, 128x32, and possibly other SSD1306 variations (128x16? 64x64?)
 
 
