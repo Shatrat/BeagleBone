@@ -29,7 +29,7 @@ my $font_filename = 'UbuntuMono-R.ttf';
 my $font = Imager::Font->new(file=>$font_filename)
   or die "Cannot load $font_filename: ", Imager->errstr;
 
-my $lcd = BeagleBone::SSD1306->new(
+my $lcd = BeagleBone::SSD1306::Image->new(
     dc_pin => 'P9_15',
     rst_pin => 'P9_23',
   );
@@ -50,19 +50,16 @@ $blank_image->box(xmin => 1, ymin => 1, xmax => 126, ymax => 62, filled => 1, co
 while(1){
 	#get timestamp for ghetto performance monitoring
 	my $start = Time::HiRes::time;
-
-	#&assignTextsNotRef();
+	
 	my $text_hr = &assignTexts();
-	#make a copy of the empty image to be written on and then displayed
 	my $OLED_image = $blank_image->copy();
-	#&drawImageNotref();
 	&drawImage($text_hr,$OLED_image);
 
+	#my screen is currently mounted upside down. meh, fix it in software.
 	$OLED_image->flip(dir=>"vh");
-	my $buffer_ref = BeagleBone::SSD1306::Image::imageToBuffer($OLED_image);	
 	
 	#now write image to screen from the buffer created by imageToBuffer
-	my $r = $lcd->writeBulk($buffer_ref);
+	my $r = $lcd->display_image($OLED_image);
 	
 	my $elapsed = Time::HiRes::time - $start;
 	print "printed [". $r ."] bytes to screen in ". sprintf("%.3f",$elapsed) ." seconds\n";
