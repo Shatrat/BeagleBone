@@ -47,6 +47,9 @@ P8_27:
 P8_29:
     mux: lcd_hsync
     gpio: 87
+P8_46:
+    mux: lcd_data1
+    gpio: 71
 P9_1:
     desc: GND
 P9_2:

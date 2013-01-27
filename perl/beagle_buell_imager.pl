@@ -1,19 +1,11 @@
 #!/usr/bin/perl
 #
 #shatrat@shatrat.com
-#GPLv2 or later
 #
-#Basic sequence (hopefully)
-#init {create image template, check everything to make sure it's working}
-#loop
-#	TODO: request serial data
-#	TODO: rx serial data
-#	generate text
-#	draw text onto copy of blank image
-#	traverse image pixels to get binary representation
-#	send binary representation to 1306 chip via perl module
-#	check GPIO to make sure bike is still running (if not init 0)
-#	sleep just so we don't completely peg the little ARM cpu
+#This script is still a work in progress.
+#When complete it should request serial data from my motorcycle ECU, process that data, and display the results to a small display
+#eventually I would like to automatically enable the heated grips when the temperature drops below 70
+#a GPS module, accelerometer, or other telemetry may also be incorporated
 #
 
 use strict;
@@ -33,7 +25,8 @@ my $lcd = BeagleBone::SSD1306::Image->new(
     dc_pin => 'P9_15',
     rst_pin => 'P9_23',
   );
-  
+
+my $heat_pin = BeagleBone::Pins->new('P8_46');
   
 #create a blank image of correct resolution
 my $blank_image = Imager->new(xsize => 128, ysize => 64, channels=>1, bits=>1);
@@ -46,8 +39,9 @@ $blank_image->box(filled => 1, color => $white_color);
 $blank_image->box(xmin => 1, ymin => 1, xmax => 126, ymax => 62, filled => 1, color => $black_color);
 
 
+my $count = 1;
 #loop through fetching info and updating screen
-while(1){
+while($count++){
 	#get timestamp for ghetto performance monitoring
 	my $start = Time::HiRes::time;
 	
@@ -61,9 +55,15 @@ while(1){
 	#now write image to screen from the buffer created by imageToBuffer
 	my $r = $lcd->display_image($OLED_image);
 	
+	#now activate the heated grips based on the temp
+	&thermostat(&getTMP36_temp(), $count);
+	
 	my $elapsed = Time::HiRes::time - $start;
 	print "printed [". $r ."] bytes to screen in ". sprintf("%.3f",$elapsed) ." seconds\n";
 #	sleep(1);
+	if($count == 255){
+		$count = 1;
+	}
 }
 
 #for testing purposes, writes image to a file.  File type is determined by Imager using the file extension, try 'image.bmp' for example
@@ -125,6 +125,24 @@ sub getTMP36_temp{
 	return ((($digital_reading/4095)*1800-500)/10)*9/5 + 32;
 	
 }
+
+sub thermostat{
+	my $temp = shift;
+	my $count = shift;
+	if ($temp < 50){
+		$heat_pin->digitalWrite(1);
+		return 1;
+	}
+	if($temp > 70){
+		return 0;
+	}
+	else{
+		$heat_pin->digitalWrite($count % 2);
+		return ($count % 2);
+	}
+	
+}
+
 
 sub getDDFIRuntimeData{
 	
