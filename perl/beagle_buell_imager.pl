@@ -26,6 +26,7 @@ my $lcd = BeagleBone::SSD1306::Image->new(
     rst_pin => 'P9_23',
   );
 
+# heat_pin is the GPIO pin which will trigger the heated equipment N-FET
 my $heat_pin = BeagleBone::Pins->new('P8_46');
   
 #create a blank image of correct resolution
@@ -144,6 +145,19 @@ sub thermostat{
 }
 
 
+sub openSerialECU{
+	my $port = Device::SerialPort->new("/dev/ttyUSB0");
+	$port->databits(8);
+	$port->baudrate(9600);
+	$port->parity("none");
+	$port->stopbits(1);
+	
+	#TODO add some error handling
+	
+	return \$port;
+	
+}
+
 sub getDDFIRuntimeData{
 	
 	
@@ -161,6 +175,21 @@ sub getDDFIRuntimeData{
 #	The response for a DDFI2 ECU is a 107 byte string following the format describe
 #	in section 22.1 of the Buell Tuning Guide v2
 #	http://xoptiinside.com/yahoo_site_admin/assets/docs/BuellTuningGuide_EN_V20.24861747.pdf
+
+#	In order to connect to UART5 on the beaglebone the OMAP_MUX has to be set
+#	lcd_data8 is uart5_txd and lcd_data9 is uart5_rxd
+#	echo 4 > /sys/kernel/debug/omap_mux/lcd_data8
+#	echo 24 > /sys/kernel/debug/omap_mux/lcd_data9
+
+my $port = shift;
+
+	my @request = (0x01, 0x00, 0x42, 0x02, 0xFF, 0x02, 0x43, 0x03, 0xFD);
+	foreach(@request){
+		$port->write($request($_));
+	}
+	my $response=$port->read(255);
+	print "$response \n"
+
 
 	
 }
