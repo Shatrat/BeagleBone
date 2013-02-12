@@ -8,6 +8,7 @@
 #a GPS module, accelerometer, or other telemetry may also be incorporated
 #
 
+use v5.14;
 use strict;
 use Data::Dumper;
 use Imager;
@@ -15,6 +16,12 @@ use Time::HiRes;
 use BeagleBone::SSD1306::Image;
 use Device::SerialPort;
 use POSIX;
+
+#open serial connection to ECU
+
+my $serialECU = &openSerialECU();
+my @ECU_data = ();
+
 
 #set up some variables for use in Imager
 my $font_filename = 'UbuntuMono-R.ttf';
@@ -43,21 +50,26 @@ $blank_image->box(xmin => 1, ymin => 1, xmax => 126, ymax => 62, filled => 1, co
 my $count = 1;
 #loop through fetching info and updating screen
 while($count++){
+
 	#get timestamp for ghetto performance monitoring
 	my $start = Time::HiRes::time;
-	
+	#retrieve data from serial ECU into ECU_data array
+	&getDDFIRuntimeData();
+	#read values into text_hr
 	my $text_hr = &assignTexts();
+	#blank the OLED_image
 	my $OLED_image = $blank_image->copy();
+	#draw values from text_hr into the OLED_image
 	&drawImage($text_hr,$OLED_image);
 
-	#my screen is currently mounted upside down. meh, fix it in software.
+	#my screen is currently mounted upside down. fix it in software.
 	$OLED_image->flip(dir=>"vh");
 	
 	#now write image to screen from the buffer created by imageToBuffer
 	my $r = $lcd->display_image($OLED_image);
 	
 	#now activate the heated grips based on the temp
-	&thermostat(&getTMP36_temp(), $count);
+	&thermostat($count);
 	
 	my $elapsed = Time::HiRes::time - $start;
 	print "printed [". $r ."] bytes to screen in ". sprintf("%.3f",$elapsed) ." seconds\n";
@@ -79,10 +91,12 @@ sub assignTexts {
 
 	my $temp_fahrenheit = sprintf("%.1f",&getTMP36_temp());
 	my $time = strftime("%I:%M %p", localtime);
-	my $gear = sprintf("%1d",$temp_fahrenheit % 6);
-	my $air_temp = 77;
-	my $oil_temp = 212;
-	my $bat_volts = 13.8;
+#	my $gear = sprintf("%1d",$temp_fahrenheit % 6);
+	my $gear = &getGearSelection();
+	
+	my $air_temp = &getIntakeAirTemp();
+	my $oil_temp = &getOilTemp();
+	my $bat_volts = &getBatVoltg();
 	
 	my %result_hash = (
 	#expected format is 'key' => [string, x, y, fontsize]
@@ -127,9 +141,68 @@ sub getTMP36_temp{
 	
 }
 
+sub getGearSelection{
+
+	my $ratio = ord $ECU_data[100];
+	my $gear1 = 42;
+	my $gear2 = 61;
+	my $gear3 = 81;
+	my $gear4 = 98;
+	my $gear5 = 115;
+	my $g = 'N';
+	
+  if($gear1 - 5 < $ratio && $ratio < $gear1 + 5)
+    {
+    	$g = 1;
+    }
+  elsif($gear2 - 5 < $ratio && $ratio < $gear2 + 5)
+    {
+    	$g = 2;
+    }
+  elsif($gear3 - 5 < $ratio && $ratio < $gear3 + 5)
+    {
+    	$g = 3;
+    }
+  elsif($gear4 - 5 < $ratio && $ratio < $gear4 + 5)
+    {
+    	$g = 4;
+    }
+  elsif($gear5 - 5 < $ratio && $ratio < $gear5 + 5)
+    {
+    	$g = 5;
+    }
+
+  return $g;
+	
+}
+
+sub getIntakeAirTemp{
+
+	#this is my ghetto way of putting two bytes back together into one integer
+	#Please don't put this on the daily WTF
+	#TIMTOWTDI right?
+	my $temp = (ord($ECU_data[32]))*256 + ord($ECU_data[33]);
+	$temp = $temp*0.1 - 40; #convert raw value to temp C
+	return sprintf("%1d",$temp*9/5 + 32); #return temp F
+	
+}
+
+sub getOilTemp{
+	#same as Air temp but different bytes
+	my $temp = (ord($ECU_data[30]))*256 + ord($ECU_data[31]);
+	$temp = $temp*0.1 - 40; #convert raw value to temp C
+	return sprintf("%1d",$temp*9/5 + 32); #return temp F
+}
+
+sub getBatVoltg{
+	
+	my $volts = (ord($ECU_data[28]))*256 + ord($ECU_data[29]);
+	return $volts * 0.01;
+}
+
 sub thermostat{
-	my $temp = shift;
 	my $count = shift;
+	my $temp = &getTMP36_temp();
 	if ($temp < 50){
 		$heat_pin->digitalWrite(1);
 		return 1;
@@ -145,34 +218,35 @@ sub thermostat{
 }
 
 
+
 sub openSerialECU{
-	my $port = Device::SerialPort->new("/dev/ttyUSB0");
-	$port->databits(8);
-	$port->baudrate(9600);
-	$port->parity("none");
-	$port->stopbits(1);
+	#ttyO5 corresponds to UART5
+	my $p = Device::SerialPort->new("/dev/ttyO5") or die "could not open ttyO5";
+	$p->baudrate(9600);
+	$p->databits(8);
+	$p->parity("none");
+	$p->stopbits(1);
+	return $p;
 	
-	#TODO add some error handling
-	
-	return \$port;
+	$serialECU->read(255);
 	
 }
 
 sub getDDFIRuntimeData{
 	
 	
-#	The following is the format of an 8 byte request to the ECU for run time data	
-#	inArray[0]=0x01; //SOH
-#	inArray[1]=0x00; //Emittend
-#	inArray[2]=0x42; //Recipient
-#	inArray[3]=0x02; //Data Size
-#	inArray[4]=0xFF; //EOH
-#	inArray[5]=0x02; //SOT
-#	inArray[6]=0x43; //Data 1 //0x56 = Get version, 0x43 = Get runttime data
-#	inArray[7]=0x03; //EOT
-#	inArray[8]=0xFD; //Checksum
+#	The following is the format of a 9 byte request to the ECU for run time data	
+#	0x01; //SOH
+#	0x00; //Emittend
+#	0x42; //Recipient
+#	0x02; //Data Size
+#	0xFF; //EOH
+#	0x02; //SOT
+#	0x43; //Data 1 //0x56 = Get version, 0x43 = Get runttime data
+#	0x03; //EOT
+#	0xFD; //Checksum
 #
-#	The response for a DDFI2 ECU is a 107 byte string following the format describe
+#	The response for a DDFI1 or DDFI2 ECU is a 107 byte string following the format describe
 #	in section 22.1 of the Buell Tuning Guide v2
 #	http://xoptiinside.com/yahoo_site_admin/assets/docs/BuellTuningGuide_EN_V20.24861747.pdf
 
@@ -181,15 +255,33 @@ sub getDDFIRuntimeData{
 #	echo 4 > /sys/kernel/debug/omap_mux/lcd_data8
 #	echo 24 > /sys/kernel/debug/omap_mux/lcd_data9
 
-my $port = shift;
-
 	my @request = (0x01, 0x00, 0x42, 0x02, 0xFF, 0x02, 0x43, 0x03, 0xFD);
-	foreach(@request){
-		$port->write($request($_));
-	}
-	my $response=$port->read(255);
-	print "$response \n"
-
-
 	
-}
+	#get rid of any garbage waiting at the serial port
+	$serialECU->read(255);
+
+	#send the request string to the ECU
+	foreach my $byte (@request){
+		$serialECU->write(map {chr} $byte);			
+	}
+	
+	my $response = '';
+	my $timeout = time + 5;
+	#read from serial into buffer until buffer is 107 bytes
+	while(length($response) < 107) {
+
+		my $new = $serialECU->read(255);
+		if($new){
+			$response = $response . $new;			
+		}
+		if(time > $timeout){
+			print "serial request timed out waiting for response \n";
+			return ();
+		}
+	}
+	
+	@ECU_data = split('',$response);
+#		print sprintf(" %02X ",ord(@ECU_data[100])) . "\n";
+#		print ord(@ECU_data[100]) . "\n";
+	}
+
